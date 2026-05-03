@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Background circle -->
+    <path
+        android:fillColor="#1a1a2e"
+        android:pathData="M0,0h108v108h-108z"/>
+    <!-- Moon crescent -->
+    <path
+        android:fillColor="#e94560"
+        android:pathData="M54,25 C38,25 25,38 25,54 C25,70 38,83 54,83 C48,78 44,67 44,54 C44,41 48,30 54,25Z"/>
+    <!-- Play triangle -->
+    <path
+        android:fillColor="#ffffff"
+        android:pathData="M60,44 L72,54 L60,64Z"/>
+</vector>
