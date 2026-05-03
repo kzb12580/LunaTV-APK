@@ -17,12 +17,77 @@ public class MainActivity extends Activity {
     private WebView webView;
     private static final String SITE_URL = "https://cftv.kouzhaobo.com";
 
-    // 修复图片在 WebView 中的显示问题
-    private static final String FIX_JS =
+    // 修复图片 + 屏蔽首次 Douban 错误弹窗
+    private static final String INIT_JS =
         "(function() {" +
-        "  if (window.__lunatvFixed) return;" +
-        "  window.__lunatvFixed = true;" +
-        // 注入 CSS
+        // ===== 1. 屏蔽首次 Douban 错误弹窗 =====
+        "  if (!window.__errorPatched) {" +
+        "    window.__errorPatched = true;" +
+        "    window.__firstLoadTime = Date.now();" +
+        // 拦截 triggerGlobalError，屏蔽前 8 秒内的 Douban 错误
+        "    var origTrigger = window.triggerGlobalError;" +
+        "    if (typeof origTrigger === 'function') {" +
+        "      window.triggerGlobalError = function(msg) {" +
+        "        if (Date.now() - window.__firstLoadTime < 8000 && msg && msg.indexOf('豆瓣') !== -1) {" +
+        "          console.log('[LunaTV-APK] 暂时屏蔽首次 Douban 错误:', msg);" +
+        "          return;" +
+        "        }" +
+        "        return origTrigger.apply(this, arguments);" +
+        "      };" +
+        "    }" +
+        // 拦截 GlobalErrorIndicator 的错误显示
+        "    var origDispatch = window.dispatchEvent;" +
+        "    window.dispatchEvent = function(evt) {" +
+        "      if (evt && evt.type === 'global-error' && Date.now() - window.__firstLoadTime < 8000) {" +
+        "        var detail = evt.detail || '';" +
+        "        if (typeof detail === 'string' && detail.indexOf('豆瓣') !== -1) {" +
+        "          console.log('[LunaTV-APK] 暂时屏蔽首次 Douban 错误事件:', detail);" +
+        "          return false;" +
+        "        }" +
+        "      }" +
+        "      return origDispatch.apply(this, arguments);" +
+        "    };" +
+        // 拦截 CustomEvent
+        "    var origCE = window.CustomEvent;" +
+        "    if (typeof origCE === 'function') {" +
+        "      window.CustomEvent = function(type, opts) {" +
+        "        var evt = new origCE(type, opts);" +
+        "        if (type === 'global-error' && Date.now() - window.__firstLoadTime < 8000) {" +
+        "          var d = opts && opts.detail || '';" +
+        "          if (typeof d === 'string' && d.indexOf('豆瓣') !== -1) {" +
+        "            evt.stopPropagation = function(){};" +
+        "          }" +
+        "        }" +
+        "        return evt;" +
+        "      };" +
+        "      window.CustomEvent.prototype = origCE.prototype;" +
+        "    }" +
+        // 自动移除首次加载的错误提示 DOM
+        "    var observer = new MutationObserver(function(mutations) {" +
+        "      if (Date.now() - window.__firstLoadTime > 8000) return;" +
+        "      mutations.forEach(function(m) {" +
+        "        m.addedNodes.forEach(function(node) {" +
+        "          if (node.nodeType === 1) {" +
+        "            var text = node.textContent || '';" +
+        "            if (text.indexOf('豆瓣') !== -1 && text.indexOf('失败') !== -1) {" +
+        "              console.log('[LunaTV-APK] 移除 Douban 错误弹窗');" +
+        "              node.remove();" +
+        "            }" +
+        "          }" +
+        "        });" +
+        "      });" +
+        "    });" +
+        "    observer.observe(document.body || document.documentElement, {childList: true, subtree: true});" +
+        // 8 秒后恢复原始函数
+        "    setTimeout(function() {" +
+        "      if (origTrigger) window.triggerGlobalError = origTrigger;" +
+        "      if (origDispatch) window.dispatchEvent = origDispatch;" +
+        "      observer.disconnect();" +
+        "    }, 8000);" +
+        "  }" +
+        // ===== 2. 修复图片渲染 =====
+        "  if (window.__imgFixed) return;" +
+        "  window.__imgFixed = true;" +
         "  var s = document.createElement('style');" +
         "  s.textContent = '' +" +
         "    'html, body { overflow-x: hidden !important; }' +" +
@@ -33,7 +98,7 @@ public class MainActivity extends Activity {
         "    'div[class*=\"aspect\"] > div img { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }' +" +
         "    'img[loading=\"lazy\"] { display: block !important; }';" +
         "  document.head.appendChild(s);" +
-        // 为 aspect 容器设置 padding-bottom hack（兼容旧 WebView）
+        // padding-bottom hack for aspect ratio
         "  document.querySelectorAll('[class*=\"aspect-\"]').forEach(function(el) {" +
         "    var m = el.className.match(/aspect-\\\\[(\\\\d+)\\\\/(\\\\d+)\\\\]/);" +
         "    if (m) {" +
@@ -44,7 +109,6 @@ public class MainActivity extends Activity {
         "      el.style.position = 'relative';" +
         "    }" +
         "  });" +
-        // 为 aspect 容器内的图片设置绝对定位
         "  document.querySelectorAll('[class*=\"aspect-\"] img').forEach(function(img) {" +
         "    img.style.position = 'absolute';" +
         "    img.style.top = '0';" +
@@ -118,11 +182,11 @@ public class MainActivity extends Activity {
 
     private void injectFix(WebView view) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-            view.evaluateJavascript(FIX_JS, null);
-            // SPA 路由切换后重新注入（重置标志位）
+            view.evaluateJavascript(INIT_JS, null);
+            // SPA 路由切换后重新注入
             view.postDelayed(() -> {
-                view.evaluateJavascript("window.__lunatvFixed = false;", null);
-                view.evaluateJavascript(FIX_JS, null);
+                view.evaluateJavascript("window.__imgFixed = false;", null);
+                view.evaluateJavascript(INIT_JS, null);
             }, 2000);
         }
     }
