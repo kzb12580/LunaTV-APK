@@ -15,7 +15,7 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
 
     private WebView webView;
-    private static final String SITE_URL = "https://cftv.kouzhaobo.com";
+    private static final String SITE_URL = "https://qianshou.dpdns.org";
 
     // 修复图片 + 屏蔽首次 Douban 错误弹窗
     private static final String INIT_JS =
@@ -160,7 +160,7 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url.contains("kouzhaobo.com") || url.startsWith("javascript:")) {
+                if (url.contains("dpdns.org") || url.startsWith("javascript:")) {
                     return false;
                 }
                 return false;
