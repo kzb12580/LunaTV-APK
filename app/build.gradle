@@ -14,6 +14,27 @@ android {
         versionName "2.0-native"
     }
 
+    // ★ 两个 flavor = 两个 APK
+    flavorDimensions "server"
+    productFlavors {
+        lunatv {
+            dimension "server"
+            applicationIdSuffix ".lunatv"
+            versionNameSuffix "-lunatv"
+            resValue "string", "app_name", "LunaTV"
+            buildConfigField "String", "SERVER_URL", '"https://cftv.kouzhaobo.com"'
+            buildConfigField "String", "SERVER_NAME", '"LunaTV"'
+        }
+        moontv {
+            dimension "server"
+            applicationIdSuffix ".moontv"
+            versionNameSuffix "-moontv"
+            resValue "string", "app_name", "MoonTV"
+            buildConfigField "String", "SERVER_URL", '"https://qianshou.dpdns.org"'
+            buildConfigField "String", "SERVER_NAME", '"MoonTV"'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled true
@@ -28,13 +49,12 @@ android {
 }
 
 dependencies {
-    // AndroidX
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.webkit:webkit:1.8.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'com.google.android.material:material:1.11.0'
 
-    // ExoPlayer / Media3 — 硬解码 HLS
+    // ExoPlayer / Media3
     implementation 'androidx.media3:media3-exoplayer:1.3.1'
     implementation 'androidx.media3:media3-exoplayer-hls:1.3.1'
     implementation 'androidx.media3:media3-ui:1.3.1'

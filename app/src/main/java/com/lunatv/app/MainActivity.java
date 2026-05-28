@@ -15,7 +15,7 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
 
     private WebView webView;
-    private static final String SITE_URL = "https://cftv.kouzhaobo.com";
+    private String siteUrl = BuildConfig.SERVER_URL;
 
     // 注入原生桥接 + 修复图片 + 屏蔽首次 Douban 错误弹窗
     private static final String INIT_JS =
@@ -185,7 +185,7 @@ public class MainActivity extends Activity {
         });
 
         webView.setWebChromeClient(new WebChromeClient());
-        webView.loadUrl(SITE_URL);
+        webView.loadUrl(siteUrl);
     }
 
     private void injectFix(WebView view) {
@@ -197,7 +197,7 @@ public class MainActivity extends Activity {
             }, 2000);
         }
     }
-
+    // 返回键：网页后退
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
