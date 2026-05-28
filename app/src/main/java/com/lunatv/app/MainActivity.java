@@ -17,14 +17,29 @@ public class MainActivity extends Activity {
     private WebView webView;
     private static final String SITE_URL = "https://cftv.kouzhaobo.com";
 
-    // 修复图片 + 屏蔽首次 Douban 错误弹窗
+    // 注入原生桥接 + 修复图片 + 屏蔽首次 Douban 错误弹窗
     private static final String INIT_JS =
         "(function() {" +
+        // ===== 0. 注入原生桥接标识 =====
+        "  if (!window.LunaNative) {" +
+        "    window.LunaNative = {" +
+        "      isNative: true," +
+        "      playVideo: function(url, title) {" +
+        "        if (window._lunaBridge) {" +
+        "          window._lunaBridge.playVideo(url, title || '');" +
+        "        }" +
+        "      }," +
+        "      playVideoWithPosition: function(url, title, pos) {" +
+        "        if (window._lunaBridge) {" +
+        "          window._lunaBridge.playVideoWithPosition(url, title || '', pos || 0);" +
+        "        }" +
+        "      }" +
+        "    };" +
+        "  }" +
         // ===== 1. 屏蔽首次 Douban 错误弹窗 =====
         "  if (!window.__errorPatched) {" +
         "    window.__errorPatched = true;" +
         "    window.__firstLoadTime = Date.now();" +
-        // 拦截 triggerGlobalError，屏蔽前 8 秒内的 Douban 错误
         "    var origTrigger = window.triggerGlobalError;" +
         "    if (typeof origTrigger === 'function') {" +
         "      window.triggerGlobalError = function(msg) {" +
@@ -35,7 +50,6 @@ public class MainActivity extends Activity {
         "        return origTrigger.apply(this, arguments);" +
         "      };" +
         "    }" +
-        // 拦截 GlobalErrorIndicator 的错误显示
         "    var origDispatch = window.dispatchEvent;" +
         "    window.dispatchEvent = function(evt) {" +
         "      if (evt && evt.type === 'global-error' && Date.now() - window.__firstLoadTime < 8000) {" +
@@ -47,7 +61,6 @@ public class MainActivity extends Activity {
         "      }" +
         "      return origDispatch.apply(this, arguments);" +
         "    };" +
-        // 拦截 CustomEvent
         "    var origCE = window.CustomEvent;" +
         "    if (typeof origCE === 'function') {" +
         "      window.CustomEvent = function(type, opts) {" +
@@ -62,7 +75,6 @@ public class MainActivity extends Activity {
         "      };" +
         "      window.CustomEvent.prototype = origCE.prototype;" +
         "    }" +
-        // 自动移除首次加载的错误提示 DOM
         "    var observer = new MutationObserver(function(mutations) {" +
         "      if (Date.now() - window.__firstLoadTime > 8000) return;" +
         "      mutations.forEach(function(m) {" +
@@ -78,7 +90,6 @@ public class MainActivity extends Activity {
         "      });" +
         "    });" +
         "    observer.observe(document.body || document.documentElement, {childList: true, subtree: true});" +
-        // 8 秒后恢复原始函数
         "    setTimeout(function() {" +
         "      if (origTrigger) window.triggerGlobalError = origTrigger;" +
         "      if (origDispatch) window.dispatchEvent = origDispatch;" +
@@ -98,7 +109,6 @@ public class MainActivity extends Activity {
         "    'div[class*=\"aspect\"] > div img { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }' +" +
         "    'img[loading=\"lazy\"] { display: block !important; }';" +
         "  document.head.appendChild(s);" +
-        // padding-bottom hack for aspect ratio
         "  document.querySelectorAll('[class*=\"aspect-\"]').forEach(function(el) {" +
         "    var m = el.className.match(/aspect-\\\\[(\\\\d+)\\\\/(\\\\d+)\\\\]/);" +
         "    if (m) {" +
@@ -129,8 +139,6 @@ public class MainActivity extends Activity {
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         );
-
-        // 隐藏导航栏
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
             | View.SYSTEM_UI_FLAG_FULLSCREEN
@@ -156,7 +164,10 @@ public class MainActivity extends Activity {
         // 硬件加速
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
-        // 页面加载完成后注入修复
+        // ★ 注册 JS 桥接 — 网页通过 window._lunaBridge 调用原生播放器
+        webView.addJavascriptInterface(new LunaBridge(this), "_lunaBridge");
+
+        // 页面加载完成后注入修复 + 桥接
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -173,17 +184,13 @@ public class MainActivity extends Activity {
             }
         });
 
-        // 全屏视频支持
         webView.setWebChromeClient(new WebChromeClient());
-
-        // 加载网站
         webView.loadUrl(SITE_URL);
     }
 
     private void injectFix(WebView view) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
             view.evaluateJavascript(INIT_JS, null);
-            // SPA 路由切换后重新注入
             view.postDelayed(() -> {
                 view.evaluateJavascript("window.__imgFixed = false;", null);
                 view.evaluateJavascript(INIT_JS, null);
@@ -191,7 +198,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    // 返回键：网页后退
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
