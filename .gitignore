@@ -8,3 +8,18 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# ===== Secrets Protection =====
+.env
+.env.*
+.env.local
+.env.production
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.ps1
+*.psm1
+Microsoft.PowerShell_profile.ps1
