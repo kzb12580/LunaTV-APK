@@ -22,22 +22,7 @@ public class MainActivity extends Activity {
     // 注入原生桥接 + 修复图片 + 屏蔽首次 Douban 错误弹窗
     private static final String INIT_JS =
         "(function() {" +
-        // ===== 0. 注入原生桥接标识 =====
-        "  if (!window.LunaNative) {" +
-        "    window.LunaNative = {" +
-        "      isNative: true," +
-        "      playVideo: function(url, title) {" +
-        "        if (window._lunaBridge) {" +
-        "          window._lunaBridge.playVideo(url, title || '');" +
-        "        }" +
-        "      }," +
-        "      playVideoWithPosition: function(url, title, pos) {" +
-        "        if (window._lunaBridge) {" +
-        "          window._lunaBridge.playVideoWithPosition(url, title || '', pos || 0);" +
-        "        }" +
-        "      }" +
-        "    };" +
-        "  }" +
+        // ===== 注入原生桥接标识 — 已禁用，视频在 WebView 内联播放 =====
         // ===== 1. 屏蔽首次 Douban 错误弹窗 =====
         "  if (!window.__errorPatched) {" +
         "    window.__errorPatched = true;" +
@@ -177,8 +162,8 @@ public class MainActivity extends Activity {
         // 硬件加速
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
-        // ★ 注册 JS 桥接 — 网页通过 window._lunaBridge 调用原生播放器
-        webView.addJavascriptInterface(new LunaBridge(this), "_lunaBridge");
+        // ★ 注册 JS 桥接 — 已禁用，视频在 WebView 内联播放
+        // webView.addJavascriptInterface(new LunaBridge(this), "_lunaBridge");
 
         // 页面加载完成后注入修复 + 桥接
         webView.setWebViewClient(new WebViewClient() {
