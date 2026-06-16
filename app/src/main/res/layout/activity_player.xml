@@ -30,10 +30,11 @@
             android:id="@+id/btn_back"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="返回"
-            android:tint="#FFFFFF" />
+            android:src="@drawable/ic_back_white"
+            android:background="@drawable/btn_rounded_bg"
+            android:scaleType="centerInside"
+            android:padding="8dp"
+            android:contentDescription="返回" />
 
         <TextView
             android:id="@+id/video_title"
