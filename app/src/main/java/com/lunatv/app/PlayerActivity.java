@@ -1,6 +1,7 @@
 package com.lunatv.app;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.PictureInPictureParams;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
@@ -21,7 +22,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.OptIn;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
@@ -41,7 +41,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @UnstableApi
-public class PlayerActivity extends AppCompatActivity {
+public class PlayerActivity extends Activity {
 
     private ExoPlayer player;
     private PlayerView playerView;
