@@ -7,6 +7,7 @@ import android.content.res.Configuration;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
+import android.webkit.CookieManager;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Rational;
@@ -28,11 +29,16 @@ import androidx.media3.common.Player;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
+import androidx.media3.exoplayer.hls.HlsMediaSource;
+import androidx.media3.datasource.DataSource;
 import androidx.media3.ui.PlayerView;
 
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 @UnstableApi
 public class PlayerActivity extends AppCompatActivity {
@@ -105,9 +111,42 @@ public class PlayerActivity extends AppCompatActivity {
         playerView.setPlayer(player);
         playerView.setUseController(true);
 
-        // 构建 MediaItem（支持 HLS）
+        // HTTP→HTTPS 转换（Android 9+ 默认禁止明文 HTTP）
+        if (videoUrl.startsWith("http://")) {
+            videoUrl = "https://" + videoUrl.substring(7);
+        }
+
+        // 构建带 headers 的 HLS 数据源
+        // 部分源站需要正确的 UA 和 Referer 才返回正常内容
+        Map<String, String> headers = new HashMap<>();
+        headers.put("User-Agent", "AptvPlayer/1.4.10");
+        String referer = videoUrl;
+        try {
+            Uri uri = Uri.parse(videoUrl);
+            referer = uri.getScheme() + "://" + uri.getHost() + "/";
+        } catch (Exception ignored) {}
+        headers.put("Referer", referer);
+
+        // 从 WebView 带上 cookies（认证用）
+        try {
+            String cookies = CookieManager.getInstance().getCookie(videoUrl);
+            if (cookies != null && !cookies.isEmpty()) {
+                headers.put("Cookie", cookies);
+            }
+        } catch (Exception ignored) {}
+
+        DefaultHttpDataSource.Factory httpFactory = new DefaultHttpDataSource.Factory();
+        httpFactory.setDefaultRequestProperties(headers);
+        httpFactory.setConnectTimeoutMs(15000);
+        httpFactory.setReadTimeoutMs(15000);
+
+        // HLS 走自定义数据源，MP4 也走
+        DataSource.Factory dataSourceFactory = httpFactory;
+        HlsMediaSource.Factory hlsFactory = new HlsMediaSource.Factory(dataSourceFactory);
+
+        // 构建 MediaItem
         MediaItem mediaItem = MediaItem.fromUri(Uri.parse(videoUrl));
-        player.setMediaItem(mediaItem);
+        player.setMediaSource(hlsFactory.createMediaSource(mediaItem));
 
         // 恢复进度
         if (resumePosition != C.TIME_UNSET) {
