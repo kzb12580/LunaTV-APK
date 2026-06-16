@@ -2,6 +2,7 @@ package com.lunatv.app;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
@@ -11,6 +12,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
@@ -132,6 +134,17 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 全局崩溃捕获 — 弹 toast 显示错误
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            Log.e("LunaTV", "Uncaught exception on " + thread.getName(), throwable);
+            runOnUiThread(() -> {
+                Toast.makeText(this, "LunaTV崩溃: " + throwable.getClass().getSimpleName() + ": " + throwable.getMessage(), Toast.LENGTH_LONG).show();
+            });
+            // 延迟退出让 toast 显示完
+            try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+            System.exit(1);
+        });
 
         // 全屏沉浸式
         requestWindowFeature(Window.FEATURE_NO_TITLE);

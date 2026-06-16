@@ -3,15 +3,15 @@ package com.lunatv.app;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PictureInPictureParams;
-import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
-import android.webkit.CookieManager;
 import android.os.Bundle;
-import android.provider.Settings;
+import android.util.Log;
 import android.util.Rational;
+import android.webkit.CookieManager;
+import android.widget.Toast;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -64,7 +64,16 @@ public class PlayerActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        try {
+            onCreateInternal(savedInstanceState);
+        } catch (Exception e) {
+            Log.e("LunaTV", "PlayerActivity crash", e);
+            Toast.makeText(this, "播放崩溃: " + e.getClass().getSimpleName() + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
+            finish();
+        }
+    }
 
+    private void onCreateInternal(Bundle savedInstanceState) {
         // 全屏沉浸
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(
